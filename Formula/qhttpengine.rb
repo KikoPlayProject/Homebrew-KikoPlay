@@ -4,10 +4,11 @@ class Qhttpengine < Formula
   url "https://github.com/nitroshare/qhttpengine/archive/1.0.1.tar.gz"
   sha256 "6505cf889909dc29bab4069116656e7ca5a9e879f04935139439c5691a76c55e"
   license "MIT"
+  revision 1
   head "https://github.com/nitroshare/qhttpengine.git"
 
   depends_on "cmake" => :build
-  depends_on "qt"
+  depends_on "qt@5"
 
   def install
     system "cmake", ".", *std_cmake_args
@@ -45,7 +46,7 @@ class Qhttpengine < Formula
       }
     EOS
 
-    system "#{Formula["qt"].bin}/qmake", "test.pro"
+    system "#{Formula["qt@5"].bin}/qmake", "test.pro"
     system "make"
     assert_predicate testpath/"test", :exist?, "test output file does not exist!"
     system "./test"
