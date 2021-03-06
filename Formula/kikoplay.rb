@@ -3,6 +3,7 @@ class Kikoplay < Formula
   homepage "https://github.com/Protostars/KikoPlay"
   url "https://github.com/Protostars/KikoPlay/archive/0.7.2.tar.gz"
   sha256 "9560163ab968b8441643724b30a132af0cfab63addf8b0aad88a8b57e07d97d5"
+  license "GPL-3.0"
   revision 2
 
   head do
