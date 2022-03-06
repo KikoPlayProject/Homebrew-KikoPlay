@@ -1,28 +1,33 @@
 class Kikoplay < Formula
   desc "NOT ONLY A Full-Featured Danmu Player"
-  homepage "https://github.com/Protostars/KikoPlay"
-  url "https://github.com/Protostars/KikoPlay/archive/0.7.2.tar.gz"
-  sha256 "9560163ab968b8441643724b30a132af0cfab63addf8b0aad88a8b57e07d97d5"
+  homepage "https://github.com/KikoPlayProject/KikoPlay"
   license "GPL-3.0"
-  revision 2
 
-  head do
-    url "https://github.com/Protostars/KikoPlay.git"
+  stable do
+    url "https://github.com/KikoPlayProject/KikoPlay/archive/0.8.2.tar.gz"
+    sha256 "dc42b74eb616286910e028ceaa6753db803d553fc37347756df68f882d1f3d6a"
 
     resource "script" do
-      url "https://github.com/Protostars/KikoPlayScript.git"
+      url "https://github.com/KikoPlayProject/KikoPlayScript.git",
+          revision: "438248101f04b9fd0af29313c78b001a110cf219"
+    end
+  end
+
+  head do
+    url "https://github.com/KikoPlayProject/KikoPlay.git"
+
+    resource "script" do
+      url "https://github.com/KikoPlayProject/KikoPlayScript.git"
     end
   end
 
   depends_on "aria2"
   depends_on "lua@5.3"
   depends_on "mpv"
-  depends_on "protostars/kikoplay/qhttpengine"
+  depends_on "kikoplayproject/kikoplay/qhttpengine"
   depends_on "qt@5"
 
   def install
-    script =  build.head? ? "Script" : "Download/Script"
-
     # Enable test
     inreplace "res/version.json", /(?<="Version":).*/, %Q("#{version}") if build.head?
 
@@ -41,7 +46,7 @@ class Kikoplay < Formula
     # Use relative path ($prefix/bin/..) for instead of /usr
     inreplace %W[
       LANServer/httpserver.cpp
-      #{script}/scriptmanager.cpp
+      Script/scriptmanager.cpp
     ] do |s|
       s.gsub! '"/usr', 'QCoreApplication::applicationDirPath()+"/..'
     end
@@ -49,31 +54,72 @@ class Kikoplay < Formula
     # Force create ~/.config/kikoplay
     inreplace "globalobjects.cpp", "if (fileinfoConfig", "if (1 || fileinfoConfig"
 
+    # Support native application menu
+    inreplace "UI/mainwindow.cpp" do |s|
+      s.gsub! /(#include <QApplication>)/,
+              "#include <QMenuBar>\n\\1"
+      s.gsub! /(.*QAction \*act_Settingse.*)/,
+              "\\1 act_Settingse->setMenuRole(QAction::PreferencesRole);"
+      s.gsub! /(.*QAction \*act_about.*)/,
+              "\\1 act_about->setMenuRole(QAction::AboutRole);"
+      s.gsub! /(.*QAction \*act_exit.*)/, <<~EOS
+          \\1 act_exit->setMenuRole(QAction::QuitRole);
+              auto *menuBar = new QMenuBar(nullptr);
+              auto *appMenu = new QMenu(nullptr);
+              menuBar->addMenu(appMenu);
+              appMenu->addAction(act_Settingse);
+              appMenu->addAction(act_about);
+              appMenu->addAction(act_exit);
+              setMenuBar(menuBar);
+      EOS
+    end
+
+    # Create icon
+    mkdir "KikoPlay.iconset"
+    system "sips", "-p", "128", "128",
+           "kikoplay.png", "--out", "KikoPlay_Square.png"
+    [16, 32, 128, 256, 512].each do |s|
+      system "sips", "-z", s, s, "KikoPlay_Square.png",
+                     "--out", "KikoPlay.iconset/icon_#{s}x#{s}.png"
+      system "sips", "-z", s * 2, s * 2, "KikoPlay_Square.png",
+                     "--out", "KikoPlay.iconset/icon_#{s}x#{s}@2x.png"
+    end
+    system "iconutil", "-c", "icns", "KikoPlay.iconset"
+
     libs = %W[
       -L#{Formula["lua@5.3"].lib}
       -L#{Formula["mpv"].lib}
       -L#{Formula["protostars/kikoplay/qhttpengine"].lib}
     ]
     system "#{Formula["qt@5"].bin}/qmake",
-           "CONFIG -= app_bundle",
-           "LIBS += #{libs * " "}"
+           "LIBS += #{libs * " "}",
+           "ICON = KikoPlay.icns"
 
     # Use packaged Lua headers
-    ln_sf Dir[Formula["lua@5.3"].opt_include/"lua/*"], "#{script}/lua/"
+    ln_sf Dir[Formula["lua@5.3"].opt_include/"lua/*"], "Script/lua/"
 
     # Strip leading /usr during installation
     ln_s prefix, "usr"
     ENV["INSTALL_ROOT"] = "."
     system "make", "install"
 
-    if build.head?
-      resource("script").stage do
-        (share/"kikoplay/script").install Dir["*"]
-      end
+    # Move app bundle and create command line shortcut
+    mkdir "usr/libexec"
+    mv "usr/bin/KikoPlay.app", "usr/libexec"
+    ln_s "usr/libexec/KikoPlay.app/Contents/MacOS/KikoPlay", "usr/bin/kikoplay"
+
+    resource("script").stage do
+      (share/"kikoplay/script").install Dir["*"]
     end
 
-    mv Dir["KikoPlay*.pdf"] * "", "help.pdf"
-    doc.install "help.pdf"
+    doc.install Dir["KikoPlay*.pdf"]
+  end
+
+  def caveats
+    <<~EOS
+      After installation, link KikoPlay app to /Applications by running:
+        ln -sf #{libexec}/KikoPlay.app /Applications/
+    EOS
   end
 
   test do
