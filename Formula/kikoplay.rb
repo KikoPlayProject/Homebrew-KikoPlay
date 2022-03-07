@@ -21,6 +21,12 @@ class Kikoplay < Formula
     end
   end
 
+  bottle do
+    rebuild 1
+    root_url "https://github.com/KikoPlayProject/Homebrew-KikoPlay/releases/download/kikoplay-v0.8.2"
+    sha256 cellar: :any, high_sierra: "af8f77463ed27a7de937714087c26069e0fdab171d402bfdf82d2b8eb6a12c7a"
+  end
+
   depends_on "aria2"
   depends_on "lua@5.3"
   depends_on "mpv"
