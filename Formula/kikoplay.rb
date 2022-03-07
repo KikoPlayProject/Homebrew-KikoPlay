@@ -29,7 +29,11 @@ class Kikoplay < Formula
 
   def install
     # Enable test
-    inreplace "res/version.json", /(?<="Version":).*/, %Q("#{version}") if build.head?
+    if build.head?
+      system "git", "fetch", "--tags"
+      version_str = Utils.safe_popen_read("git", "describe", "--tags")
+      inreplace "res/version.json", /(?<="Version":).*/, %Q("#{version_str}")
+    end
 
     inreplace "main.cpp", "args.pop_front();", <<~EOS
       args.pop_front();
@@ -38,7 +42,7 @@ class Kikoplay < Formula
         QFile version(":/res/version.json");
         version.open(QIODevice::ReadOnly);
         QJsonObject curVersionObj = QJsonDocument::fromJson(version.readAll()).object();
-        qDebug() << qUtf8Printable(curVersionObj.value("Version").toString());
+        QTextStream(stderr) << qUtf8Printable(curVersionObj.value("Version").toString());
         exit(0);
       }
     EOS
@@ -48,7 +52,7 @@ class Kikoplay < Formula
       LANServer/httpserver.cpp
       Script/scriptmanager.cpp
     ] do |s|
-      s.gsub! '"/usr', 'QCoreApplication::applicationDirPath()+"/..'
+      s.gsub! '"/usr/share', 'QCoreApplication::applicationDirPath()+"/../Resources'
     end
 
     # Force create ~/.config/kikoplay
@@ -107,6 +111,7 @@ class Kikoplay < Formula
     mkdir "usr/libexec"
     mv "usr/bin/KikoPlay.app", "usr/libexec"
     bin.install_symlink libexec/"KikoPlay.app/Contents/MacOS/KikoPlay"
+    (libexec/"KikoPlay.app/Contents/Resources").install_symlink share/"kikoplay"
 
     resource("script").stage do
       (share/"kikoplay/script").install Dir["*"]
@@ -123,6 +128,7 @@ class Kikoplay < Formula
   end
 
   test do
-    assert_match version.to_s, shell_output("#{bin}/KikoPlay -V 2>&1 | tail -n1")
+    version_str = shell_output("#{bin}/KikoPlay -V 2>&1").lines.last.chomp
+    assert_equal version.to_s, version_str.sub(/^.*-\d+-g/, "HEAD-")
   end
 end
