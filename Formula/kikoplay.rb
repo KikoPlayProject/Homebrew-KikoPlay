@@ -106,7 +106,7 @@ class Kikoplay < Formula
     # Move app bundle and create command line shortcut
     mkdir "usr/libexec"
     mv "usr/bin/KikoPlay.app", "usr/libexec"
-    ln_s "usr/libexec/KikoPlay.app/Contents/MacOS/KikoPlay", "usr/bin/kikoplay"
+    bin.install_symlink libexec/"KikoPlay.app/Contents/MacOS/KikoPlay"
 
     resource("script").stage do
       (share/"kikoplay/script").install Dir["*"]
@@ -118,7 +118,7 @@ class Kikoplay < Formula
   def caveats
     <<~EOS
       After installation, link KikoPlay app to /Applications by running:
-        ln -sf #{libexec}/KikoPlay.app /Applications/
+        ln -sf #{opt_libexec}/KikoPlay.app /Applications/
     EOS
   end
 
