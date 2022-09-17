@@ -99,7 +99,7 @@ class Kikoplay < Formula
     libs = %W[
       -L#{Formula["lua@5.3"].lib}
       -L#{Formula["mpv"].lib}
-      -L#{Formula["protostars/kikoplay/qhttpengine"].lib}
+      -L#{Formula["kikoplayproject/kikoplay/qhttpengine"].lib}
     ]
     system "#{Formula["qt@5"].bin}/qmake",
            "LIBS += #{libs * " "}",
